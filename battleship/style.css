@@ -1,0 +1,39 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+#game {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+.board-container {
+    margin: 0 20px;
+}
+.board {
+    display: grid;
+    grid-template-columns: repeat(10, 30px);
+    grid-template-rows: repeat(10, 30px);
+    gap: 2px;
+}
+.cell {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #000;
+    line-height: 30px;
+    user-select: none;
+}
+.player-ship {
+    background-color: lightgray;
+}
+.hit {
+    background-color: red;
+}
+.miss {
+    background-color: lightblue;
+}
+#status {
+    margin-top: 20px;
+    font-size: 1.2em;
+    min-height: 1.5em;
+}
