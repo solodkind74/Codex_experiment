@@ -23,7 +23,7 @@ Your win/loss record, your best win (fewest shots) and your settings are saved i
 
 ### Music and sound
 
-All music and sound effects are synthesized live with the Web Audio API, so the game has no audio files. There is a calm shanty with waves and a ship's bell while you deploy, a march during battle, and fanfares for victory and defeat. Sound starts on your first click, because browsers block audio until the page is used. The buttons in the top corner turn music and effects on or off.
+All music and sound effects are synthesized live with the Web Audio API, so the game has no audio files. There is a calm shanty with waves and a ship's bell while you deploy, a march during battle, and fanfares for victory and defeat. Sound starts when you press **Set sail** on the title screen. The buttons in the top corner turn music and effects on or off.
 
 ### Code layout
 

@@ -453,7 +453,8 @@ const Sound = (() => {
     /* ---------- sound effects ---------- */
 
     function sfxStart() {
-        if (!ctx || !prefs.sfx || ctx.state !== 'running') return null;
+        // A context created in this same gesture may still read 'suspended'; sounds queued now play once it starts.
+        if (!ctx || !prefs.sfx || document.hidden || ctx.state === 'closed') return null;
         return ctx.currentTime + 0.01;
     }
 
@@ -560,9 +561,9 @@ const Sound = (() => {
         if (ctx) sfxBus.gain.setTargetAtTime(on ? SFX_LEVEL : 0, ctx.currentTime, 0.05);
     }
 
-    function setVolume(value) {
+    function setVolume(value, persist = true) {
         prefs.volume = value;
-        savePrefs();
+        if (persist) savePrefs();
         if (ctx) master.gain.setTargetAtTime(value, ctx.currentTime, 0.05);
     }
 
