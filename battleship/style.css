@@ -659,7 +659,7 @@ kbd {
     inset: 22%;
     border-radius: 50%;
     border: 2px solid var(--peg);
-    animation: splash 0.7s 0.12s ease-out both;
+    animation: splash 0.58s 0.12s ease-out both;
 }
 
 .fx.blast {

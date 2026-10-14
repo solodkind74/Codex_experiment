@@ -13,6 +13,7 @@
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     const sameCell = (a, b) => (a && b ? a[0] === b[0] && a[1] === b[1] : a === b);
     const fleetDef = id => FLEET.find(d => d.id === id);
+    const pct = (hits, shots) => (shots ? `${Math.round((hits / shots) * 100)}%` : '–');
 
     function load(key, fallback) {
         try {
@@ -46,6 +47,8 @@
         stats: null,
         turnNo: 0
     };
+
+    if (!LEVELS[state.settings.level]) state.settings.level = 'captain';
 
     /* ---------- board view ---------- */
 
@@ -204,6 +207,7 @@
         $('log-panel').hidden = phase === 'setup';
         $('home-fleet').hidden = phase === 'setup';
         $('retreat').hidden = phase !== 'battle';
+        if (phase !== 'battle') disarmRetreat();
         $('new-battle').hidden = phase !== 'over';
         $('home-board').tabIndex = phase === 'setup' ? 0 : -1;
         $('enemy-board').tabIndex = phase === 'battle' ? 0 : -1;
@@ -231,8 +235,10 @@
     function setSail() {
         if (!state.onTitle) return;
         state.onTitle = false;
+        $('app').inert = false;
         Sound.unlock();
         Sound.horn();
+        Sound.music('harbor');
         const screen = $('title-screen');
         screen.classList.add('leaving');
         setTimeout(() => {
@@ -310,7 +316,8 @@
         const complete = placed === FLEET.length;
         const ready = complete && !clash.size;
         $('start').disabled = !ready;
-        $('randomize').textContent = placed && !complete ? 'Place the rest' : 'Random fleet';
+        const inHand = state.held && state.held.origin ? 1 : 0;
+        $('randomize').textContent = placed && placed + inHand < FLEET.length ? 'Place the rest' : 'Random fleet';
         const vertical = (state.held ? state.held.dir : state.dir) === 'V';
         $('dir-badge').textContent = vertical ? '↕' : '↔';
         $('rotate').setAttribute('aria-label', `Rotate, currently ${vertical ? 'vertical' : 'horizontal'}`);
@@ -506,7 +513,7 @@
 
     function onSetupKey(e) {
         const onBoard = document.activeElement === $('home-board');
-        if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if ((e.code === 'KeyR' || e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && !e.altKey) {
             rotate();
         } else if (e.key === 'Escape' && state.held) {
             returnHeld();
@@ -562,6 +569,8 @@
         state.ai = AI.create(level, { allowTouch });
         state.stats = { shots: 0, hits: 0, enemyShots: 0, enemyHits: 0, started: Date.now() };
         $('log').innerHTML = '';
+        $('home-banner').className = 'banner';
+        $('enemy-banner').className = 'banner';
         $('rules-summary').textContent = [
             `vs ${LEVELS[level]}`,
             allowTouch ? 'ships may touch' : 'ships kept apart',
@@ -615,7 +624,6 @@
 
     function renderTally() {
         const s = state.stats;
-        const pct = (hits, shots) => (shots ? `${Math.round((hits / shots) * 100)}%` : '–');
         $('tally').innerHTML = `
             <thead><tr><th></th><th>Shots</th><th>Hits</th><th>Accuracy</th></tr></thead>
             <tbody>
@@ -791,18 +799,20 @@
         const stats = [
             ['Shots', s.shots],
             ['Hits', s.hits],
-            ['Accuracy', s.shots ? `${Math.round((s.hits / s.shots) * 100)}%` : '–'],
+            ['Accuracy', pct(s.hits, s.shots)],
             ['Enemy sunk', `${FLEET.length - left}/${FLEET.length}`],
             ['Ships lost', `${lost}/${FLEET.length}`],
             ['Time', `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`]
         ];
         $('debrief-stats').innerHTML = stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
         $('debrief').hidden = false;
+        $('app').inert = true;
         $('play-again').focus();
     }
 
     function hideDebrief() {
         $('debrief').hidden = true;
+        $('app').inert = false;
     }
 
     // Back to the deployment screen, keeping the fleet where it was.
@@ -828,21 +838,22 @@
     /* ---------- wiring ---------- */
 
     let retreatTimer = null;
+    function disarmRetreat() {
+        clearTimeout(retreatTimer);
+        delete $('retreat').dataset.confirm;
+        $('retreat').textContent = 'Retreat';
+    }
+
     function onRetreat() {
         const btn = $('retreat');
         if (btn.dataset.confirm) {
-            clearTimeout(retreatTimer);
-            delete btn.dataset.confirm;
-            btn.textContent = 'Retreat';
+            disarmRetreat();
             toSetup();
             return;
         }
         btn.dataset.confirm = '1';
         btn.textContent = 'Tap again to retreat';
-        retreatTimer = setTimeout(() => {
-            delete btn.dataset.confirm;
-            btn.textContent = 'Retreat';
-        }, 3000);
+        retreatTimer = setTimeout(disarmRetreat, 3000);
     }
 
     function wire() {
@@ -959,16 +970,17 @@
             renderSoundControls();
             renderTitleSound();
         });
-        $('volume').addEventListener('input', e => Sound.setVolume(Number(e.target.value) / 100));
+        $('volume').addEventListener('input', e => Sound.setVolume(Number(e.target.value) / 100, false));
+        $('volume').addEventListener('change', e => Sound.setVolume(Number(e.target.value) / 100));
     }
 
     wire();
     renderRecord();
     renderSoundControls();
     renderTitleSound();
+    $('app').inert = true;
     TitleScene.init($('title-scene'));
     hold(FLEET[0]);
     layout();
     renderSetup();
-    Sound.music('harbor');
 })();

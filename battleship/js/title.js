@@ -19,9 +19,13 @@ const TitleScene = (() => {
         return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     }
 
+    const rgbCache = new Map();
     function rgba(hex, alpha) {
-        const n = parseInt(hex.replace('#', ''), 16);
-        return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+        if (!rgbCache.has(hex)) {
+            const n = parseInt(hex.replace('#', ''), 16);
+            rgbCache.set(hex, `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`);
+        }
+        return `rgba(${rgbCache.get(hex)}, ${alpha})`;
     }
 
     function init(el) {
@@ -38,6 +42,14 @@ const TitleScene = (() => {
             flash: token('--blast-mid'),
             smoke: token('--smoke-puff')
         };
+        // Stars are placed once, as fractions of the sky, so resizing doesn't reshuffle them.
+        stars = Array.from({ length: 400 }, () => ({
+            x: Math.random(),
+            y: Math.random() * 0.92,
+            r: 0.4 + Math.random() * 1.1,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.0008 + Math.random() * 0.002
+        }));
         resize();
         window.addEventListener('resize', resize);
         if (reducedMotion.matches) {
@@ -64,15 +76,6 @@ const TitleScene = (() => {
         canvas.width = Math.round(width * dpr);
         canvas.height = Math.round(height * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        const horizon = height * 0.6;
-        const count = Math.round((width * horizon) / 5000);
-        stars = Array.from({ length: count }, () => ({
-            x: Math.random() * width,
-            y: Math.random() * horizon * 0.92,
-            r: 0.4 + Math.random() * 1.1,
-            phase: Math.random() * Math.PI * 2,
-            speed: 0.0008 + Math.random() * 0.002
-        }));
         if (reducedMotion.matches) draw(4000);
     }
 
@@ -116,10 +119,12 @@ const TitleScene = (() => {
         ctx.fillStyle = sky;
         ctx.fillRect(0, 0, width, horizon + 1);
 
-        for (const s of stars) {
+        // Keep star density the same at any screen size.
+        const visible = Math.min(stars.length, Math.round((width * horizon) / 5000));
+        for (const s of stars.slice(0, visible)) {
             ctx.fillStyle = rgba(colors.moon, 0.35 + 0.35 * Math.sin(t * s.speed + s.phase));
             ctx.beginPath();
-            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.arc(s.x * width, s.y * horizon, s.r, 0, Math.PI * 2);
             ctx.fill();
         }
 

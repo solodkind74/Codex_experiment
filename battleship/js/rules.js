@@ -62,17 +62,10 @@ const Rules = (() => {
         return [Math.max(0, Math.min(row, maxRow)), Math.max(0, Math.min(col, maxCol))];
     }
 
-    function canPlace(board, row, col, size, dir, { allowTouch = false, ignoreId = null } = {}) {
+    function canPlace(board, row, col, size, dir, { allowTouch = false } = {}) {
         for (const [r, c] of shipCells(row, col, size, dir)) {
-            if (!inBounds(r, c)) return false;
-            const occupant = board.grid[r][c].ship;
-            if (occupant && occupant.id !== ignoreId) return false;
-            if (!allowTouch) {
-                for (const [nr, nc] of neighbors(r, c)) {
-                    const near = board.grid[nr][nc].ship;
-                    if (near && near.id !== ignoreId) return false;
-                }
-            }
+            if (!inBounds(r, c) || board.grid[r][c].ship) return false;
+            if (!allowTouch && neighbors(r, c).some(([nr, nc]) => board.grid[nr][nc].ship)) return false;
         }
         return true;
     }
