@@ -531,6 +531,15 @@ const Sound = (() => {
             if (t === null) return;
             voice({ dest: sfxBus, t, freq: 1180, dur: 1.4, vol: 0.13, attack: 0.004, sustain: 0, decay: 1.1, release: 0.4 });
             voice({ dest: sfxBus, t: t + 0.9, freq: 1180, dur: 0.9, vol: 0.04, attack: 0.004, sustain: 0, decay: 0.7, release: 0.3 });
+        },
+        // A ship's horn: two low reedy tones a fifth apart.
+        horn() {
+            const t = sfxStart();
+            if (t === null) return;
+            [92, 138].forEach(freq => {
+                voice({ dest: sfxBus, t, freq, dur: 1.5, type: 'sawtooth', vol: 0.2, attack: 0.18, release: 0.6, cutoff: 650, q: 1.2, vibrato: 6 });
+            });
+            noise({ dest: sfxBus, t, dur: 1.7, vol: 0.06, type: 'bandpass', freq: 380, attack: 0.2 });
         }
     };
 

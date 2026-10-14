@@ -29,7 +29,8 @@
     const state = {
         phase: 'setup',         // 'setup' | 'battle' | 'over'
         settings: load(SETTINGS_KEY, { level: 'captain', allowTouch: false, bonusShot: false }),
-        record: load(RECORD_KEY, { wins: 0, losses: 0 }),
+        record: load(RECORD_KEY, { wins: 0, losses: 0, best: 0 }),
+        onTitle: true,          // the title screen is showing
         home: Rules.createBoard(),
         enemy: null,
         ai: null,
@@ -210,10 +211,41 @@
     }
 
     function renderRecord() {
-        const { wins, losses } = state.record;
-        $('record').textContent = wins + losses
-            ? `Record: ${wins} won, ${losses} lost`
+        const { wins, losses, best } = state.record;
+        const text = wins + losses
+            ? `Record: ${wins} won, ${losses} lost${best ? ` · Best win: ${best} shots` : ''}`
             : 'No battles fought yet';
+        $('record').textContent = text;
+        $('title-record').textContent = text;
+    }
+
+    /* ---------- title screen ---------- */
+
+    function renderTitleSound() {
+        const { music, sfx } = Sound.prefs;
+        $('title-sound').textContent = music || sfx
+            ? `${music ? 'Music' : 'Sound effects'} will start when you set sail.`
+            : 'Music and sound effects are off. You can turn them on in the top corner after you set sail.';
+    }
+
+    function setSail() {
+        if (!state.onTitle) return;
+        state.onTitle = false;
+        Sound.unlock();
+        Sound.horn();
+        const screen = $('title-screen');
+        screen.classList.add('leaving');
+        setTimeout(() => {
+            screen.hidden = true;
+            TitleScene.stop();
+        }, 750);
+    }
+
+    function toggleHowTo() {
+        const open = $('how-to').hidden;
+        $('how-to').hidden = !open;
+        $('how-to-toggle').setAttribute('aria-expanded', String(open));
+        $('how-to-toggle').textContent = open ? 'Hide rules' : 'How to play';
     }
 
     function renderSoundControls() {
@@ -725,8 +757,11 @@
         state.phase = 'over';
         state.turn = null;
         state.locked = false;
+        const newBest = won && (!state.record.best || state.stats.shots < state.record.best);
         if (won) state.record.wins++;
         else state.record.losses++;
+        if (newBest) state.record.best = state.stats.shots;
+        state.newBest = newBest;
         save(RECORD_KEY, state.record);
         renderRecord();
         enemyView.mark(null);
@@ -751,7 +786,7 @@
         $('debrief').dataset.result = won ? 'won' : 'lost';
         $('debrief-title').textContent = won ? 'Victory' : 'Defeat';
         $('debrief-text').textContent = won
-            ? `You sank the enemy fleet in ${s.shots} shots${lost ? ` and lost ${lost} ${lost === 1 ? 'ship' : 'ships'}` : ' without losing a ship'}.`
+            ? `You sank the enemy fleet in ${s.shots} shots${lost ? ` and lost ${lost} ${lost === 1 ? 'ship' : 'ships'}` : ' without losing a ship'}.${state.newBest && state.record.wins > 1 ? ' That is your best win yet.' : ''}`
             : `The ${LEVELS[state.settings.level].toLowerCase()} sank your fleet in ${s.enemyShots} shots. ${left} enemy ${left === 1 ? 'ship was' : 'ships were'} still afloat.`;
         const stats = [
             ['Shots', s.shots],
@@ -866,7 +901,17 @@
             }
         });
 
+        $('set-sail').addEventListener('click', setSail);
+        $('how-to-toggle').addEventListener('click', toggleHowTo);
+
         document.addEventListener('keydown', e => {
+            if (state.onTitle) {
+                if ((e.key === 'Enter' || e.key === ' ') && e.target === document.body) {
+                    e.preventDefault();
+                    setSail();
+                }
+                return;
+            }
             if (e.target.matches('input, select, textarea')) return;
             if (state.phase === 'setup') onSetupKey(e);
             else if (e.key === 'Escape' && !$('debrief').hidden) hideDebrief();
@@ -907,10 +952,12 @@
         $('music-toggle').addEventListener('click', () => {
             Sound.setMusic(!Sound.prefs.music);
             renderSoundControls();
+            renderTitleSound();
         });
         $('sfx-toggle').addEventListener('click', () => {
             Sound.setSfx(!Sound.prefs.sfx);
             renderSoundControls();
+            renderTitleSound();
         });
         $('volume').addEventListener('input', e => Sound.setVolume(Number(e.target.value) / 100));
     }
@@ -918,6 +965,8 @@
     wire();
     renderRecord();
     renderSoundControls();
+    renderTitleSound();
+    TitleScene.init($('title-scene'));
     hold(FLEET[0]);
     layout();
     renderSetup();
