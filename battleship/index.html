@@ -2,25 +2,152 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Battleship Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Battleship</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Saira+Semi+Condensed:wght@400;500;600;700&family=Saira+Stencil+One&display=swap">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Battleship</h1>
-    <div id="game">
-        <div class="board-container">
-            <h2>Your Board</h2>
-            <div id="player-board" class="board"></div>
-        </div>
-        <div class="board-container">
-            <h2>Enemy Board</h2>
-            <div id="computer-board" class="board"></div>
+    <div class="app">
+        <header class="masthead">
+            <div class="brand">
+                <h1 class="title">Battleship</h1>
+                <p class="record" id="record">No battles fought yet</p>
+            </div>
+            <div class="sound" role="group" aria-label="Sound">
+                <button type="button" class="icon-btn" id="music-toggle" aria-pressed="true" aria-label="Music" title="Music">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/><path class="mute-slash" d="M3 3l18 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+                </button>
+                <button type="button" class="icon-btn" id="sfx-toggle" aria-pressed="true" aria-label="Sound effects" title="Sound effects">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="mute-slash" d="M3 3l18 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+                </button>
+                <input type="range" id="volume" min="0" max="100" step="5" value="80" aria-label="Volume">
+            </div>
+        </header>
+
+        <section class="signal" id="signal" data-state="setup" aria-live="polite">
+            <span class="lamp" aria-hidden="true"></span>
+            <div class="signal-copy">
+                <strong class="signal-title" id="signal-title">Deploy your fleet</strong>
+                <span class="signal-detail" id="signal-detail">Place all five ships on your grid.</span>
+            </div>
+            <button type="button" class="btn" id="retreat" hidden>Retreat</button>
+            <button type="button" class="btn primary" id="new-battle" hidden>New battle</button>
+        </section>
+
+        <main class="theatre" id="theatre" data-phase="setup">
+            <section class="plate" id="home-plate" aria-labelledby="home-heading">
+                <header class="plate-head">
+                    <h2 id="home-heading">Your waters</h2>
+                    <span class="plate-meta" id="home-meta"></span>
+                </header>
+                <div class="board-wrap">
+                    <div class="board" id="home-board" tabindex="0" aria-label="Your waters. With a ship selected, use the arrow keys to move it and Enter to place it."></div>
+                    <div class="banner" id="home-banner" aria-hidden="true"></div>
+                </div>
+                <ul class="fleet" id="home-fleet" aria-label="Your fleet" hidden></ul>
+            </section>
+
+            <section class="plate" id="enemy-plate" aria-labelledby="enemy-heading" hidden>
+                <header class="plate-head">
+                    <h2 id="enemy-heading">Enemy waters</h2>
+                    <span class="plate-meta" id="enemy-meta"></span>
+                </header>
+                <div class="board-wrap">
+                    <div class="board target" id="enemy-board" tabindex="0" aria-label="Enemy waters. Use the arrow keys to aim and Enter to fire."></div>
+                    <div class="banner" id="enemy-banner" aria-hidden="true"></div>
+                </div>
+                <ul class="fleet" id="enemy-fleet" aria-label="Enemy fleet"></ul>
+            </section>
+
+            <section class="deploy" id="deploy" aria-labelledby="deploy-heading">
+                <div class="deploy-intro">
+                    <h2 id="deploy-heading">Shipyard</h2>
+                    <p class="hint">Pick a ship, then tap a square on your grid to place it. Drag placed ships to move them. <span class="hint-mouse">Press <kbd>R</kbd> or right-click to rotate.</span><span class="hint-touch">Tap Rotate to turn the ship in hand.</span></p>
+                </div>
+
+                <ul class="dock" id="dock" aria-label="Ships to place"></ul>
+
+                <div class="tools">
+                    <button type="button" class="btn" id="rotate" title="Rotate (R)">Rotate <span class="dir-badge" id="dir-badge" aria-hidden="true">↔</span></button>
+                    <button type="button" class="btn" id="randomize">Random fleet</button>
+                    <button type="button" class="btn" id="clear">Clear</button>
+                </div>
+            </section>
+
+            <section class="orders" id="orders" aria-label="Battle settings">
+                <fieldset class="rules">
+                    <legend>Opponent</legend>
+                    <div class="ranks">
+                        <label class="rank">
+                            <input type="radio" name="level" value="cadet" id="level-cadet">
+                            <span class="stripes" aria-hidden="true"><i></i></span>
+                            <span class="rank-name">Cadet</span>
+                            <span class="rank-note">Fires at random</span>
+                        </label>
+                        <label class="rank">
+                            <input type="radio" name="level" value="captain" id="level-captain">
+                            <span class="stripes" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                            <span class="rank-name">Captain</span>
+                            <span class="rank-note">Hunts damaged ships</span>
+                        </label>
+                        <label class="rank">
+                            <input type="radio" name="level" value="admiral" id="level-admiral">
+                            <span class="stripes" aria-hidden="true"><i class="broad"></i><i></i><i></i><i></i></span>
+                            <span class="rank-name">Admiral</span>
+                            <span class="rank-note">Plays the odds</span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <fieldset class="rules">
+                    <legend>Rules</legend>
+                    <label class="switch">
+                        <input type="checkbox" id="allow-touch">
+                        <span>Ships may touch</span>
+                    </label>
+                    <p class="switch-note" id="touch-note"></p>
+                    <label class="switch">
+                        <input type="checkbox" id="bonus-shot">
+                        <span>A hit earns another shot</span>
+                    </label>
+                </fieldset>
+            </section>
+
+            <div class="launch" id="launch">
+                <p class="deploy-status" id="deploy-status">0 of 5 ships placed</p>
+                <button type="button" class="btn primary big" id="start" disabled>Start battle</button>
+            </div>
+
+            <section class="log-panel" id="log-panel" aria-labelledby="log-heading" hidden>
+                <header class="plate-head">
+                    <h2 id="log-heading">Captain's log</h2>
+                    <span class="plate-meta" id="rules-summary"></span>
+                </header>
+                <table class="tally" id="tally"></table>
+                <ol class="log" id="log"></ol>
+            </section>
+        </main>
+    </div>
+
+    <div class="debrief" id="debrief" hidden>
+        <div class="debrief-card" role="dialog" aria-modal="true" aria-labelledby="debrief-title">
+            <p class="eyebrow">After-action report</p>
+            <h2 class="debrief-title" id="debrief-title">Victory</h2>
+            <p class="debrief-text" id="debrief-text"></p>
+            <dl class="debrief-stats" id="debrief-stats"></dl>
+            <div class="debrief-actions">
+                <button type="button" class="btn primary big" id="play-again">Play again</button>
+                <button type="button" class="btn" id="view-boards">View boards</button>
+            </div>
         </div>
     </div>
-    <div id="status"></div>
-    <button id="restart" style="display:none;">Play Again</button>
 
-    <script src="script.js"></script>
+    <script src="js/rules.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/game.js"></script>
 </body>
 </html>

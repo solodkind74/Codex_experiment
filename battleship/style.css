@@ -1,39 +1,1264 @@
+/*
+ * Layout: a ship's bridge at night. Two chart plates sit on a dark console,
+ * a signal lamp above them says whose turn it is, and the captain's log runs
+ * alongside. One deliberate dark look; brass marks your actions, red marks damage.
+ */
+:root {
+    color-scheme: dark;
+    --abyss: #07121c;
+    --abyss-glow: #123049;
+    --console: #0e1d2b;
+    --console-hi: #15293b;
+    --rule: #23405a;
+    --chalk: #e6edf2;
+    --fog: #8aa0b2;
+    --brass: #d6a24a;
+    --brass-ink: #1b1305;
+    --signal: #ff5446;
+    --peg: #f2f5f7;
+    --peg-shade: #9fb0bd;
+    --ok: #5fd39a;
+    --sea-hi: #14507a;
+    --sea-lo: #0a2c45;
+    --swell: rgba(255, 255, 255, 0.03);
+    --grid-line: rgba(160, 205, 235, 0.14);
+    --steel-hi: #b9c4cd;
+    --steel-mid: #82909c;
+    --steel-lo: #56626d;
+    --deck-mark: rgba(240, 244, 247, 0.6);
+    --flame: rgba(255, 160, 60, 0.6);
+    --flame-edge: rgba(255, 84, 70, 0.22);
+    --smoke: rgba(20, 24, 28, 0.55);
+    --blast-core: #fff4cc;
+    --blast-mid: #ffbb55;
+    --scrim: rgba(4, 10, 16, 0.74);
+
+    --font-display: 'Saira Stencil One', Impact, 'Arial Narrow Bold', sans-serif;
+    --font-body: 'Saira Semi Condensed', 'Arial Narrow', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+
+    --label: 22px;
+    --cell: clamp(24px, calc((100vw - 32px - var(--label) - 14px) / 10), 38px);
+    --board-w: calc(var(--label) + var(--cell) * 10 + 12px);
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+html {
+    min-height: 100%;
+}
+
 body {
-    font-family: Arial, sans-serif;
-    text-align: center;
+    margin: 0;
+    min-height: 100%;
+    background:
+        radial-gradient(1100px 520px at 50% -12%, var(--abyss-glow), transparent 65%),
+        var(--abyss);
+    background-color: var(--abyss);
+    color: var(--chalk);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.45;
 }
-#game {
+
+button, input {
+    font: inherit;
+}
+
+h1, h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    text-wrap: balance;
+}
+
+.app {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding-block: 18px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: 16px;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.title {
+    font-size: clamp(2rem, 6vw, 2.7rem);
+    line-height: 1;
+    letter-spacing: 0.08em;
+}
+
+.record {
+    margin: 4px 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fog);
+}
+
+.sound {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.icon-btn {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--console-hi);
+    color: var(--chalk);
+    cursor: pointer;
+}
+
+.icon-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.icon-btn .mute-slash {
+    display: none;
+}
+
+.icon-btn[aria-pressed="false"] {
+    color: var(--fog);
+}
+
+.icon-btn[aria-pressed="false"] .mute-slash {
+    display: inline;
+}
+
+#volume {
+    width: 92px;
+    accent-color: var(--brass);
+}
+
+/* ---------- signal strip ---------- */
+
+.signal {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    padding: 12px 16px;
+    background: var(--console);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+}
+
+.lamp {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--fog);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--fog) 18%, transparent);
+}
+
+.signal[data-state="you"] .lamp,
+.signal[data-state="won"] .lamp {
+    background: var(--brass);
+    box-shadow: 0 0 14px 3px color-mix(in srgb, var(--brass) 55%, transparent);
+}
+
+.signal[data-state="enemy"] .lamp {
+    background: var(--signal);
+    box-shadow: 0 0 14px 3px color-mix(in srgb, var(--signal) 55%, transparent);
+    animation: blink 0.9s steps(2, jump-none) infinite;
+}
+
+.signal[data-state="lost"] .lamp {
+    background: var(--signal);
+}
+
+.signal-copy {
+    flex: 1 1 220px;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+}
+
+.signal-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.35rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.signal[data-state="you"] .signal-title,
+.signal[data-state="won"] .signal-title {
+    color: var(--brass);
+}
+
+.signal[data-state="enemy"] .signal-title,
+.signal[data-state="lost"] .signal-title {
+    color: var(--signal);
+}
+
+.signal-detail {
+    color: var(--fog);
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    margin-top: 20px;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--console-hi);
+    color: var(--chalk);
+    font-weight: 600;
+    font-size: 0.88rem;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
 }
-.board-container {
-    margin: 0 20px;
+
+.btn:hover:not(:disabled) {
+    border-color: var(--fog);
 }
+
+.btn.primary {
+    background: var(--brass);
+    border-color: var(--brass);
+    color: var(--brass-ink);
+}
+
+.btn.primary:hover:not(:disabled) {
+    border-color: var(--brass);
+    filter: brightness(1.08);
+}
+
+.btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.btn.big {
+    width: 100%;
+    padding: 15px 20px;
+    font-size: 1rem;
+}
+
+#retreat[data-confirm] {
+    border-color: var(--signal);
+    color: var(--signal);
+}
+
+.btn:focus-visible,
+.icon-btn:focus-visible,
+.board:focus-visible,
+.dock-ship:focus-visible,
+.rank:has(input:focus-visible),
+.switch input:focus-visible {
+    outline: 2px solid var(--brass);
+    outline-offset: 2px;
+}
+
+kbd {
+    font-family: var(--font-mono);
+    font-size: 0.75em;
+    padding: 1px 5px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    color: var(--chalk);
+    background: var(--console-hi);
+}
+
+/* ---------- layout ---------- */
+
+.theatre {
+    display: grid;
+    gap: 22px 28px;
+    align-items: start;
+    justify-content: center;
+}
+
+.theatre[data-phase="setup"] {
+    grid-template-columns: auto minmax(0, 390px);
+    grid-template-areas: "home deploy" "orders launch";
+}
+
+.theatre[data-phase="battle"],
+.theatre[data-phase="over"] {
+    grid-template-columns: auto auto minmax(250px, 340px);
+    grid-template-areas: "home enemy log";
+}
+
+#home-plate { grid-area: home; }
+#enemy-plate { grid-area: enemy; }
+#deploy { grid-area: deploy; }
+#orders { grid-area: orders; }
+#launch { grid-area: launch; }
+#log-panel { grid-area: log; }
+
+@media (max-width: 1220px) {
+    .theatre[data-phase="battle"],
+    .theatre[data-phase="over"] {
+        grid-template-columns: auto auto;
+        grid-template-areas: "home enemy" "log log";
+    }
+}
+
+@media (max-width: 920px) {
+    .theatre[data-phase="battle"],
+    .theatre[data-phase="over"] {
+        grid-template-columns: minmax(0, auto);
+        grid-template-areas: "enemy" "home" "log";
+    }
+
+    /* Your own grid shrinks on small screens so the target grid stays the focus. */
+    .theatre:not([data-phase="setup"]) #home-plate {
+        --cell: clamp(20px, calc((100vw - 32px - var(--label) - 14px) / 10 * 0.74), 30px);
+    }
+}
+
+@media (max-width: 800px) {
+    .theatre[data-phase="setup"] {
+        grid-template-columns: minmax(0, auto);
+        grid-template-areas: "home" "deploy" "orders" "launch";
+    }
+
+    .theatre[data-phase="setup"] .deploy {
+        width: var(--board-w);
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    #volume {
+        display: none;
+    }
+}
+
+/* ---------- plates and boards ---------- */
+
+.plate {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.plate-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.plate-head h2 {
+    font-size: 1.05rem;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+}
+
+.log-panel .plate-head {
+    flex-wrap: wrap;
+}
+
+.plate-meta {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fog);
+    font-variant-numeric: tabular-nums;
+}
+
+.board-wrap {
+    position: relative;
+    justify-self: start;
+}
+
 .board {
     display: grid;
-    grid-template-columns: repeat(10, 30px);
-    grid-template-rows: repeat(10, 30px);
+    grid-template-columns: var(--label) repeat(10, var(--cell));
+    grid-template-rows: var(--label) repeat(10, var(--cell));
+    padding: 4px 7px 7px 3px;
+    background: var(--console);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+}
+
+.theatre[data-phase="setup"] #home-board {
+    touch-action: none;
+}
+
+.label {
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--fog);
+}
+
+.label.lit {
+    color: var(--brass);
+    font-weight: 500;
+}
+
+.water {
+    position: relative;
+    z-index: 0;
+    overflow: hidden;
+    border-radius: 3px;
+    background: radial-gradient(circle at 28% 18%, var(--sea-hi), var(--sea-lo) 72%);
+    box-shadow: inset 1px 1px 0 var(--grid-line);
+}
+
+.water::before {
+    content: '';
+    position: absolute;
+    inset: -40px;
+    background: repeating-linear-gradient(115deg, transparent 0 15px, var(--swell) 15px 18px);
+    animation: drift 16s linear infinite;
+}
+
+.cell {
+    position: relative;
+    z-index: 2;
+    box-shadow: inset -1px -1px 0 var(--grid-line);
+}
+
+.cell.fx-host {
+    z-index: 5;
+}
+
+/* Hit and miss pegs, like the plastic pegs in the board game. */
+.cell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 38%;
+    height: 38%;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 0.18s ease-out;
+}
+
+.cell.miss::after {
+    transform: scale(1);
+    background: radial-gradient(circle at 35% 30%, var(--peg), var(--peg-shade) 75%);
+    box-shadow: 0 1px 2px var(--smoke);
+}
+
+.cell.cleared::after {
+    transform: scale(1);
+    width: 14%;
+    height: 14%;
+    background: var(--peg-shade);
+    opacity: 0.55;
+}
+
+.cell.hit::after {
+    transform: scale(1);
+    background: radial-gradient(circle at 35% 30%, var(--peg), var(--signal) 42%, color-mix(in srgb, var(--signal) 55%, black));
+    box-shadow: 0 0 10px 2px color-mix(in srgb, var(--signal) 55%, transparent);
+}
+
+.cell.hit::before {
+    content: '';
+    position: absolute;
+    inset: 6%;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--flame), var(--flame-edge) 48%, transparent 70%);
+    animation: burn 1.1s ease-in-out infinite alternate;
+}
+
+.cell.sunk::before {
+    background: radial-gradient(circle, var(--smoke), transparent 70%);
+    animation: none;
+}
+
+.cell.sunk::after {
+    box-shadow: none;
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--signal) 70%, white), color-mix(in srgb, var(--signal) 60%, black));
+}
+
+/* Setup cursors */
+.theatre[data-phase="setup"] #home-board .cell {
+    cursor: pointer;
+}
+
+.theatre[data-phase="setup"] #home-board .cell.has-ship {
+    cursor: grab;
+}
+
+/* Targeting */
+.theatre[data-turn="player"] .board.target .cell:not(.shot) {
+    cursor: crosshair;
+}
+
+.theatre[data-turn="enemy"] .board.target {
+    cursor: wait;
+}
+
+.board.target .cell.aim {
+    background:
+        linear-gradient(var(--brass), var(--brass)) center / 2px 44% no-repeat,
+        linear-gradient(var(--brass), var(--brass)) center / 44% 2px no-repeat,
+        color-mix(in srgb, var(--brass) 14%, transparent);
+    box-shadow: inset 0 0 0 2px var(--brass);
+}
+
+.board.target .cell.aim.shot {
+    background: color-mix(in srgb, var(--fog) 10%, transparent);
+    box-shadow: inset 0 0 0 2px var(--fog);
+}
+
+.board .cell.incoming {
+    background:
+        linear-gradient(var(--signal), var(--signal)) center / 2px 44% no-repeat,
+        linear-gradient(var(--signal), var(--signal)) center / 44% 2px no-repeat;
+    box-shadow: inset 0 0 0 2px var(--signal);
+    animation: blink 0.28s steps(2, jump-none) infinite;
+}
+
+.theatre[data-turn="enemy"] #enemy-plate .board-wrap,
+.theatre[data-turn="player"] #home-plate .board-wrap {
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
+
+/* ---------- ships ---------- */
+
+.ship {
+    position: relative;
+    z-index: 1;
+    margin: 4px;
+    pointer-events: none;
+    --hull: linear-gradient(var(--hull-angle), var(--steel-hi), var(--steel-mid) 55%, var(--steel-lo));
+    --turret: radial-gradient(circle, var(--steel-lo) 0 3px, var(--steel-hi) 3.5px 4.5px, transparent 5px);
+}
+
+.ship.h {
+    --hull-angle: 180deg;
+    background: var(--turret) -4px center / var(--cell) 100% repeat-x, var(--hull);
+    clip-path: polygon(0 24%, 6px 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 6px 100%, 0 76%);
+}
+
+.ship.v {
+    --hull-angle: 90deg;
+    background: var(--turret) center -4px / 100% var(--cell) repeat-y, var(--hull);
+    clip-path: polygon(24% 0, 76% 0, 100% 6px, 100% calc(100% - 15px), 50% 100%, 0 calc(100% - 15px), 0 6px);
+}
+
+/* The carrier has a flight deck instead of gun turrets. */
+.ship.h[data-type="carrier"] {
+    background: repeating-linear-gradient(90deg, var(--deck-mark) 0 6px, transparent 6px 11px) center / 100% 2px no-repeat, var(--hull);
+}
+
+.ship.v[data-type="carrier"] {
+    background: repeating-linear-gradient(180deg, var(--deck-mark) 0 6px, transparent 6px 11px) center / 2px 100% no-repeat, var(--hull);
+}
+
+/* The submarine is a rounded hull with a conning tower. */
+.ship[data-type="submarine"] {
+    clip-path: none;
+    border-radius: 999px;
+    --steel-hi: #9aa6b0;
+    --steel-mid: #66727d;
+    --steel-lo: #414c56;
+}
+
+.ship.h[data-type="submarine"] {
+    background: linear-gradient(var(--steel-hi), var(--steel-hi)) 38% 50% / 14px 46% no-repeat, var(--hull);
+}
+
+.ship.v[data-type="submarine"] {
+    background: linear-gradient(var(--steel-hi), var(--steel-hi)) 50% 38% / 46% 14px no-repeat, var(--hull);
+}
+
+.ship.sunk,
+.ship.wreck {
+    filter: brightness(0.5) sepia(0.7) saturate(1.5) hue-rotate(-18deg);
+}
+
+.ship.revealed {
+    opacity: 0.6;
+}
+
+.ship.conflict {
+    filter: sepia(1) saturate(5) hue-rotate(-42deg) brightness(0.95);
+}
+
+.ghost {
+    position: relative;
+    z-index: 3;
+    margin: 2px;
+    border: 2px dashed var(--ok);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--ok) 18%, transparent);
+    pointer-events: none;
+}
+
+.ghost.bad {
+    border-color: var(--signal);
+    background: color-mix(in srgb, var(--signal) 22%, transparent);
+}
+
+/* ---------- impact effects ---------- */
+
+.fx {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.fx.splash {
+    border: 2px solid var(--peg);
+    animation: splash 0.7s ease-out forwards;
+}
+
+.fx.splash::after {
+    content: '';
+    position: absolute;
+    inset: 22%;
+    border-radius: 50%;
+    border: 2px solid var(--peg);
+    animation: splash 0.7s 0.12s ease-out both;
+}
+
+.fx.blast {
+    background: radial-gradient(circle, var(--blast-core) 0, var(--blast-mid) 28%, color-mix(in srgb, var(--signal) 75%, transparent) 50%, transparent 70%);
+    animation: blast 0.65s ease-out forwards;
+}
+
+.board.shake {
+    animation: shake 0.45s ease-in-out;
+}
+
+.banner {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 6;
+    padding: 10px 18px;
+    border: 2px solid var(--brass);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--console) 88%, transparent);
+    color: var(--brass);
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 4.5vw, 1.6rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-4deg);
+}
+
+.banner.loss {
+    border-color: var(--signal);
+    color: var(--signal);
+}
+
+.banner.show {
+    animation: stamp 2s ease-out forwards;
+}
+
+/* ---------- fleet status ---------- */
+
+.fleet {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 6px 16px;
+    max-width: var(--board-w);
+}
+
+.fleet-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.fleet-name {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.fleet-item.sunk .fleet-name {
+    color: var(--fog);
+    text-decoration: line-through;
+    text-decoration-color: var(--signal);
+}
+
+.sunk-tag {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--signal);
+    text-decoration: none;
+}
+
+.pips {
+    display: inline-flex;
+    gap: 3px;
+}
+
+.pips i {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--steel-lo);
+    border: 1px solid var(--steel-mid);
+}
+
+.pips i.hit {
+    background: var(--signal);
+    border-color: var(--signal);
+}
+
+.fleet-item.sunk .pips i {
+    background: color-mix(in srgb, var(--signal) 45%, var(--console));
+    border-color: transparent;
+}
+
+/* ---------- deploy panel ---------- */
+
+.deploy,
+.orders {
+    display: grid;
+    gap: 18px;
+    padding: 18px;
+    background: var(--console);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    min-width: 0;
+}
+
+.orders {
+    width: var(--board-w);
+    max-width: 100%;
+}
+
+.deploy-intro h2 {
+    font-size: 1.3rem;
+    letter-spacing: 0.06em;
+}
+
+.hint {
+    margin: 6px 0 0;
+    color: var(--fog);
+    font-size: 0.9rem;
+}
+
+.dock {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.dock-ship {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 76px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--console-hi);
+    color: var(--chalk);
+    text-align: left;
+    cursor: grab;
+    touch-action: none;
+}
+
+.dock-ship:hover {
+    border-color: var(--fog);
+}
+
+.dock-ship.held {
+    border-color: var(--brass);
+    background: color-mix(in srgb, var(--brass) 14%, var(--console-hi));
+}
+
+.dock-ship.placed:not(.held) .dock-name {
+    color: var(--fog);
+}
+
+.silhouette {
+    display: block;
+    height: 11px;
+    width: calc(var(--len) * 15px);
+    background: linear-gradient(var(--steel-hi), var(--steel-mid) 55%, var(--steel-lo));
+    clip-path: polygon(0 25%, 3px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 3px 100%, 0 75%);
+}
+
+.dock-ship.placed:not(.held) .silhouette {
+    opacity: 0.4;
+}
+
+.dock-name {
+    font-weight: 600;
+}
+
+.dock-state {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fog);
+}
+
+.dock-ship.held .dock-state {
+    color: var(--brass);
+}
+
+.tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.dir-badge {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--brass);
+}
+
+.hint-touch {
+    display: none;
+}
+
+@media (hover: none) {
+    .hint-mouse {
+        display: none;
+    }
+
+    .hint-touch {
+        display: inline;
+    }
+}
+
+.rules {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.rules legend {
+    padding: 0;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fog);
+}
+
+.ranks {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.rank {
+    display: grid;
+    align-content: start;
+    gap: 3px;
+    padding: 10px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--console-hi);
+    cursor: pointer;
+}
+
+.rank input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.rank:has(input:checked) {
+    border-color: var(--brass);
+    background: color-mix(in srgb, var(--brass) 14%, var(--console-hi));
+}
+
+/* Sleeve lace: one stripe for a cadet, four for a captain, a broad band and three for an admiral. */
+.stripes {
+    display: grid;
+    gap: 2px;
+    width: 26px;
+    margin-bottom: 4px;
+}
+
+.stripes i {
+    display: block;
+    height: 2px;
+    background: var(--brass);
+    border-radius: 1px;
+}
+
+.stripes i.broad {
+    height: 5px;
+}
+
+.rank-name {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.rank-note {
+    font-size: 0.75rem;
+    line-height: 1.25;
+    color: var(--fog);
+}
+
+.switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.switch input {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: none;
+    width: 38px;
+    height: 22px;
+    margin: 0;
+    border-radius: 999px;
+    background: var(--rule);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.switch input::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--chalk);
+    transition: transform 0.15s;
+}
+
+.switch input:checked {
+    background: var(--brass);
+}
+
+.switch input:checked::before {
+    transform: translateX(16px);
+    background: var(--brass-ink);
+}
+
+.switch-note {
+    margin: -4px 0 0 48px;
+    font-size: 0.8rem;
+    color: var(--fog);
+}
+
+.launch {
+    display: grid;
+    gap: 8px;
+}
+
+.deploy-status {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--fog);
+}
+
+.deploy-status.warn {
+    color: var(--signal);
+}
+
+/* ---------- captain's log ---------- */
+
+.log-panel {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    background: var(--console);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    min-width: 0;
+}
+
+.tally {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.tally th,
+.tally td {
+    padding: 4px 6px;
+    text-align: right;
+    border-bottom: 1px solid var(--rule);
+}
+
+.tally th:first-child {
+    text-align: left;
+}
+
+.tally thead th {
+    font-weight: 400;
+    color: var(--fog);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.tally tbody th {
+    font-weight: 500;
+}
+
+.log {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 330px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+}
+
+.entry {
+    display: grid;
+    grid-template-columns: 2.2em 3.8em minmax(0, 1fr);
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--rule);
+    animation: arrive 0.6s ease-out;
+}
+
+.entry .turn,
+.entry .who {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--fog);
+    padding-top: 2px;
+}
+
+.entry.you .who {
+    color: var(--brass);
+}
+
+.entry.enemy .who {
+    color: var(--signal);
+}
+
+.entry.hit .what {
+    color: var(--chalk);
+    font-weight: 600;
+}
+
+.entry.sunk .what {
+    color: var(--signal);
+    font-weight: 700;
+}
+
+.entry.you.sunk .what {
+    color: var(--brass);
+}
+
+.entry.quote .what {
+    font-style: italic;
+}
+
+/* ---------- debrief ---------- */
+
+.debrief {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    background: var(--scrim);
+    backdrop-filter: blur(3px);
+    animation: fade 0.3s ease-out;
+}
+
+.debrief-card {
+    width: 100%;
+    max-width: 440px;
+    display: grid;
+    gap: 14px;
+    padding: 26px;
+    background: var(--console);
+    border: 2px solid var(--brass);
+    border-radius: 14px;
+}
+
+.debrief[data-result="lost"] .debrief-card {
+    border-color: var(--signal);
+}
+
+.eyebrow {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fog);
+}
+
+.debrief-title {
+    font-size: clamp(2.6rem, 11vw, 3.4rem);
+    line-height: 1;
+    letter-spacing: 0.06em;
+    color: var(--brass);
+}
+
+.debrief[data-result="lost"] .debrief-title {
+    color: var(--signal);
+}
+
+.debrief-text {
+    margin: 0;
+    color: var(--chalk);
+}
+
+.debrief-stats {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+}
+
+.debrief-stats div {
+    display: grid;
     gap: 2px;
 }
-.cell {
-    width: 30px;
-    height: 30px;
-    border: 1px solid #000;
-    line-height: 30px;
-    user-select: none;
+
+.debrief-stats dt {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fog);
 }
-.player-ship {
-    background-color: lightgray;
+
+.debrief-stats dd {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-variant-numeric: tabular-nums;
 }
-.hit {
-    background-color: red;
+
+.debrief-actions {
+    display: grid;
+    gap: 8px;
 }
-.miss {
-    background-color: lightblue;
+
+/* ---------- animation ---------- */
+
+@keyframes drift {
+    to { transform: translate(36px, 12px); }
 }
-#status {
-    margin-top: 20px;
-    font-size: 1.2em;
-    min-height: 1.5em;
+
+@keyframes burn {
+    from { transform: scale(0.85); opacity: 0.75; }
+    to { transform: scale(1.12); opacity: 1; }
+}
+
+@keyframes blink {
+    50% { opacity: 0.25; }
+}
+
+@keyframes splash {
+    from { transform: scale(0.2); opacity: 1; }
+    to { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes blast {
+    0% { transform: scale(0.2); opacity: 1; }
+    55% { opacity: 0.95; }
+    100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes shake {
+    20% { transform: translate(-4px, 2px); }
+    40% { transform: translate(4px, -2px); }
+    60% { transform: translate(-3px, -1px); }
+    80% { transform: translate(2px, 1px); }
+}
+
+@keyframes stamp {
+    0% { opacity: 0; transform: translate(-50%, -50%) rotate(-4deg) scale(1.6); }
+    12% { opacity: 1; transform: translate(-50%, -50%) rotate(-4deg) scale(1); }
+    78% { opacity: 1; transform: translate(-50%, -50%) rotate(-4deg) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) rotate(-4deg) scale(1); }
+}
+
+@keyframes arrive {
+    from { background: color-mix(in srgb, var(--brass) 18%, transparent); }
+    to { background: transparent; }
+}
+
+@keyframes fade {
+    from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .banner.show {
+        animation: none;
+        opacity: 0;
+    }
 }
